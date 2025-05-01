@@ -127,3 +127,4 @@ wheel==0.45.1
 wrapt==1.17.2
 xyzservices==2025.4.0
 zipp==3.21.0
+black==24.3.0
