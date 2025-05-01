@@ -52,11 +52,13 @@ jobs:
 
       - name: 🚗 Build Trainer Docker Image
         run: |
-          docker build -f docker/Dockerfile.train -t ghcr.io/${{ github.repository }}/trainer:latest .
+          REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -f docker/Dockerfile.train -t ghcr.io/$REPO_ID/trainer:latest .
 
       - name: 🚗 Build Dashboard Docker Image
         run: |
-          docker build -f docker/Dockerfile.serve -t ghcr.io/${{ github.repository }}/dashboard:latest .
+          REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -f docker/Dockerfile.serve -t ghcr.io/$REPO_ID/dashboard:latest .
 
   publish:
     name: 📄 Publish Docker Images
@@ -72,11 +74,13 @@ jobs:
 
       - name: 📤 Push Trainer Image
         run: |
-          docker push ghcr.io/${{ github.repository }}/trainer:latest
+          REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker push ghcr.io/$REPO_ID/trainer:latest
 
       - name: 📤 Push Dashboard Image
         run: |
-          docker push ghcr.io/${{ github.repository }}/dashboard:latest
+          REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker push ghcr.io/$REPO_ID/dashboard:latest
 
   notify:
     name: 📢 Notify Completion
