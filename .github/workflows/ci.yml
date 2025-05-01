@@ -23,50 +23,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 black pytest
-
-  lint-format:
-    name: 🤔 Lint and Auto-format
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: 🔧 Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
-      - name: 💪 Install flake8 and black
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 black
-
-      - name: ⚡ Run flake8 (non-blocking)
-        run: |
-          flake8 . || true
-
-      - name: ✏️ Auto-format with Black
-        run: |
-          black .
-
-      - name: 📆 Commit format changes (if any)
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add .
-          git diff --cached --quiet || git commit -m "Auto-format with Black"
-
-      - name: 🚀 Push formatting fixes
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+          pip install pytest
 
   test:
     name: 🔬 Unit Tests
     runs-on: ubuntu-latest
-    needs: lint-format
+    needs: setup
     steps:
       - uses: actions/checkout@v3
 
