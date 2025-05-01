@@ -43,28 +43,13 @@ jobs:
           pytest || true
 
   docker-build:
-    name: 🚧 Docker Build
+    name: 🚧 Docker Build & Push
     runs-on: ubuntu-latest
     needs: test
     steps:
       - name: ✅ Checkout Code
         uses: actions/checkout@v3
 
-      - name: 🚗 Build Trainer Docker Image
-        run: |
-          REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker build -f docker/Dockerfile.train -t ghcr.io/$REPO_ID/trainer:latest .
-
-      - name: 🚗 Build Dashboard Docker Image
-        run: |
-          REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker build -f docker/Dockerfile.serve -t ghcr.io/$REPO_ID/dashboard:latest .
-
-  publish:
-    name: 📄 Publish Docker Images
-    runs-on: ubuntu-latest
-    needs: docker-build
-    steps:
       - name: 🔑 Log in to GHCR
         uses: docker/login-action@v2
         with:
@@ -72,20 +57,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📤 Push Trainer Image
+      - name: 🚗 Build and Push Trainer Docker Image
         run: |
           REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -f docker/Dockerfile.train -t ghcr.io/$REPO_ID/trainer:latest .
           docker push ghcr.io/$REPO_ID/trainer:latest
 
-      - name: 📤 Push Dashboard Image
+      - name: 🚗 Build and Push Dashboard Docker Image
         run: |
           REPO_ID=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -f docker/Dockerfile.serve -t ghcr.io/$REPO_ID/dashboard:latest .
           docker push ghcr.io/$REPO_ID/dashboard:latest
 
   notify:
     name: 📢 Notify Completion
     runs-on: ubuntu-latest
-    needs: publish
+    needs: docker-build
     steps:
       - name: 💬 Echo Success
         run: echo "🎉 CI/CD pipeline completed successfully!"
