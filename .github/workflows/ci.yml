@@ -22,7 +22,8 @@ jobs:
       - name: 💪 Install Core Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt flake8 black pytest
+          pip install -r requirements.txt
+          pip install flake8 black pytest
 
   lint-format:
     name: 🤔 Lint and Auto-format
@@ -31,14 +32,22 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: 💪 Install flake8 and black
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black
+
       - name: ⚡ Run flake8 (non-blocking)
         run: |
-          pip install flake8 || true
           flake8 . || true
 
       - name: ✏️ Auto-format with Black
         run: |
-          pip install black || true
           black .
 
       - name: 📆 Commit format changes (if any)
@@ -61,9 +70,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
       - name: 🌍 Run Pytest
         run: |
-          pip install pytest || true
+          pip install pytest
           pytest || true
 
   docker-build:
