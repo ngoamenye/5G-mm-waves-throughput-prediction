@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mlflow:
     build:
@@ -6,14 +8,14 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./mlflow:/mlflow
+      - ../mlflow:/mlflow
 
   trainer:
     build:
       context: ..
       dockerfile: docker/Dockerfile.train
     environment:
-      MLFLOW_TRACKING_URI: http://mlflow:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
       - mlflow
     volumes:
@@ -26,7 +28,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.serve
     environment:
-      MLFLOW_TRACKING_URI: http://mlflow:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     ports:
       - "8501:8501"
     depends_on:
@@ -34,4 +36,4 @@ services:
     volumes:
       - ../models:/app/models
       - ../data:/app/data
-      - ../outputs:/app/outputs"
+      - ../outputs:/app/outputs

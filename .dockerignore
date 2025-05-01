@@ -1,0 +1,12 @@
+# Exclude artifacts and local env
+venv/
+.venv/
+data/
+models/
+outputs/
+notebooks/
+*.ipynb
+__pycache__/
+*.py[cod]
+.env
+.git/

@@ -1,11 +1,19 @@
+<<<<<<< HEAD
 from dotenv import load_dotenv
 load_dotenv()
 
 import os
+=======
+import os
+# Disable oneDNN optimizations to prevent name_scope stack errors
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+>>>>>>> 58004f7dd (Initial commit: MLOps pipeline, Streamlit apps, Docker setup)
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+<<<<<<< HEAD
 import pydeck as pdk
 import tensorflow as tf
 from tensorflow.keras import layers, models
@@ -28,11 +36,26 @@ feature_names = joblib.load(FEATURES_PKL)
 nf = len(feature_names)
 
 def build_model(seq_len, nf):
+=======
+import folium
+from streamlit_folium import st_folium
+from math import radians, cos, sin
+import tensorflow as tf
+from tensorflow.keras import layers, models
+
+# Paths to artifacts
+WEIGHTS_H5 = 'models/throughput_weights.weights.h5'
+SCALER_PATH = 'models/scaler.gz'
+
+# Rebuild CNN+LSTM model architecture without compile to avoid compile-time name_scope
+def build_cnn_lstm_model(seq_len, nf):
+>>>>>>> 58004f7dd (Initial commit: MLOps pipeline, Streamlit apps, Docker setup)
     inp = layers.Input(shape=(seq_len, nf))
     x = layers.Conv1D(32, 3, padding='same', activation='relu')(inp)
     x = layers.Conv1D(64, 3, padding='same', activation='relu')(x)
     x = layers.MaxPooling1D(2)(x)
     x = layers.LSTM(64)(x)
+<<<<<<< HEAD
     raw = layers.Dense(1, name='raw')(x)
     smooth = layers.Dense(1, name='smooth')(x)
     return models.Model(inputs=inp, outputs=[raw, smooth])
@@ -167,3 +190,136 @@ elif pred < 50:
     st.info("🟠 Moderate throughput: consider reorienting to closest antenna.")
 else:
     st.success("🟢 Good coverage: continue on 5G mmWave.")
+=======
+    raw_out = layers.Dense(1, name='raw')(x)
+    smooth_out = layers.Dense(1, name='smooth')(x)
+    return models.Model(inputs=inp, outputs=[raw_out, smooth_out])
+
+# Load scaler and determine expected features
+scaler = joblib.load(SCALER_PATH)
+SEQ_LEN = 10
+NF_EXPECTED = int(scaler.scale_.shape[0])
+
+# Build model and load weights
+model = build_cnn_lstm_model(SEQ_LEN, NF_EXPECTED)
+try:
+    model.load_weights(WEIGHTS_H5)
+except Exception:
+    st.error('Model weights not found. Please run train_tf_model.py to generate throughput_weights.weights.h5')
+    st.stop()
+
+# Encode mobility modes
+encode = {'Stationary': 0, 'Walking': 1, 'Driving': 2}
+
+# Streamlit configuration
+st.set_page_config(layout='wide', page_title='5G Throughput Demo Scenario')
+st.title('🚀 5G Throughput Simulator Demo')
+
+# Demo scenario selection
+preset = st.sidebar.selectbox('Demo Scenario', ['-- Select --', 'Urban Drive'])
+if preset == 'Urban Drive':
+    scenario = 'Driving'
+    speed = 60
+    ant_df = pd.DataFrame([
+        {'lat': 40.730610, 'lon': -73.935242, 'type': '5G SA mmWave', 'orientation': 45},
+        {'lat': 40.731610, 'lon': -73.935742, 'type': '5G SA mmWave', 'orientation': 135},
+        {'lat': 40.732610, 'lon': -73.936242, 'type': '5G NSA',        'orientation': 90}
+    ])
+    route = [
+        (40.730610, -73.935242),
+        (40.730800, -73.935200),
+        (40.731000, -73.935150),
+        (40.731200, -73.935100),
+        (40.731400, -73.935050),
+        (40.731600, -73.935000)
+    ]
+    beamwidth = 60
+    coverage_m = 300
+else:
+    # Custom controls
+    scenario = st.sidebar.selectbox('Mobility Mode', ['Stationary', 'Walking', 'Driving'])
+    speed = st.sidebar.slider('Speed (km/h)', 0, 120, 30)
+    st.sidebar.markdown('### Antenna Configuration')
+    ant_file = st.sidebar.file_uploader('Upload antenna CSV', type=['csv'])
+    if ant_file:
+        ant_df = pd.read_csv(ant_file)
+    else:
+        ant_df = pd.DataFrame([
+            {'lat': 40.7128, 'lon': -74.0060, 'type': '5G SA mmWave', 'orientation': 0},
+            {'lat': 40.7138, 'lon': -74.0050, 'type': '5G NSA',        'orientation': 90}
+        ])
+    st.sidebar.markdown('### mmWave Coverage Settings')
+    beamwidth = st.sidebar.slider('Beamwidth (°)', 10, 180, 90)
+    coverage_m = st.sidebar.slider('Coverage Radius (m)', 100, 1000, 500)
+    st.sidebar.markdown('### Route')
+    route_file = st.sidebar.file_uploader('Upload Route CSV (lat,lon)', type=['csv'])
+    if route_file:
+        df_route = pd.read_csv(route_file)
+        route = list(zip(df_route.lat, df_route.lon))
+    else:
+        route = [(ant_df.lat.mean(), ant_df.lon.mean())]
+
+# Session state for navigation
+if 'step' not in st.session_state:
+    st.session_state.step = 0
+if 'route' not in st.session_state:
+    st.session_state.route = route
+
+# Step navigation buttons
+col1, col2 = st.sidebar.columns(2)
+if col1.button('Previous Step'):
+    st.session_state.step = max(0, st.session_state.step - 1)
+if col2.button('Next Step'):
+    st.session_state.step = min(len(st.session_state.route) - 1, st.session_state.step + 1)
+
+# Current position
+lat, lon = st.session_state.route[st.session_state.step]
+st.sidebar.markdown(f'**Step {st.session_state.step+1}/{len(st.session_state.route)}**')
+st.sidebar.markdown(f'Position: ({lat:.6f}, {lon:.6f})')
+
+# Create map
+m = folium.Map(location=[lat, lon], zoom_start=16, tiles='CartoDB positron')
+folium.PolyLine(st.session_state.route, color='blue', weight=2.5, opacity=0.7).add_to(m)
+icon = 'car' if scenario == 'Driving' else 'male' if scenario == 'Walking' else 'circle'
+folium.Marker([lat, lon], icon=folium.Icon(icon=icon, prefix='fa', color='red')).add_to(m)
+
+# Plot antennas & coverage
+for _, row in ant_df.iterrows():
+    folium.Marker(
+        [row.lat, row.lon],
+        icon=folium.Icon(icon='signal', prefix='fa', color='blue'),
+        popup=f"{row.type} @ {row.orientation}°"
+    ).add_to(m)
+    if 'mmwave' in row.type.lower():
+        pts = []
+        half = beamwidth / 2
+        for ang in np.linspace(row.orientation - half, row.orientation + half, 30):
+            r = radians(ang)
+            d = coverage_m / 111000
+            pts.append([row.lat + d * cos(r), row.lon + d * sin(r)])
+        pts.insert(0, [row.lat, row.lon])
+        folium.Polygon(pts, color='cyan', fill=True, fill_opacity=0.2).add_to(m)
+
+st_folium(m, width=800, height=600)
+
+# Feature assembly and prediction
+def assemble_features(lat, lon, speed, ant_df, scenario):
+    arr = [lat, lon, speed, encode[scenario]]
+    for _, r in ant_df.iterrows():
+        arr.extend([r.lat, r.lon, r.orientation])
+    return np.array(arr)
+
+seq = np.tile(assemble_features(lat, lon, speed, ant_df, scenario), (SEQ_LEN, 1))
+# Pad or truncate to expected feature size
+if seq.shape[1] < NF_EXPECTED:
+    pad = np.zeros((SEQ_LEN, NF_EXPECTED - seq.shape[1]))
+    seq = np.hstack([seq, pad])
+elif seq.shape[1] > NF_EXPECTED:
+    seq = seq[:, :NF_EXPECTED]
+
+scaled = scaler.transform(seq).reshape(1, SEQ_LEN, -1)
+pred_raw, pred_smooth = model.predict(scaled)
+r, sv = float(pred_raw), float(pred_smooth)
+pred = r if abs(r - sv) < abs(sv - r) else sv
+st.metric('Predicted Throughput (Mbps)', f'{pred:.2f}')
+>>>>>>> 58004f7dd (Initial commit: MLOps pipeline, Streamlit apps, Docker setup)
