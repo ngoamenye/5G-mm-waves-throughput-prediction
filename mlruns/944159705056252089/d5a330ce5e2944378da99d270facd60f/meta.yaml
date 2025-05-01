@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/axxiv/Desktop/5g_throughput_dashboard/mlruns/944159705056252089/d5a330ce5e2944378da99d270facd60f/artifacts
+end_time: 1746056806024
+entry_point_name: ''
+experiment_id: '944159705056252089'
+lifecycle_stage: active
+run_id: d5a330ce5e2944378da99d270facd60f
+run_name: flawless-shark-856
+run_uuid: d5a330ce5e2944378da99d270facd60f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746054380503
+status: 3
+tags: []
+user_id: axxiv

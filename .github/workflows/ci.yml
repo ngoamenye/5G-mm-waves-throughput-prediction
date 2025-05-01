@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  train-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install flake8
+          pip install -r requirements.txt
+      - name: Lint with flake8
+        run: |
+          flake8 .
+
+  docker-build:
+    needs: train-and-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Build trainer image
+        run: |
+          docker build -f docker/Dockerfile.train -t \${{ github.repository }}:/trainer:latest .
+      - name: Build dashboard image
+        run: |
+          docker build -f docker/Dockerfile.serve -t \${{ github.repository }}:/dashboard:latest .
+
+  publish:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: \${{ github.actor }}
+          password: \${{ secrets.GITHUB_TOKEN }}
+      - name: Push trainer image
+        run: |
+          docker tag \${{ github.repository }}:/trainer:latest ghcr.io/\${{ github.repository }}/trainer:latest
+          docker push ghcr.io/\${{ github.repository }}/trainer:latest
+      - name: Push dashboard image
+        run: |
+          docker tag \${{ github.repository }}:/dashboard:latest ghcr.io/\${{ github.repository }}/dashboard:latest
+          docker push ghcr.io/\${{ github.repository }}/dashboard:latest

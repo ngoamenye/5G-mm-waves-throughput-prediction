@@ -1,0 +1,14 @@
+# Dockerfile.mlflow
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install MLflow
+RUN pip install --no-cache-dir mlflow
+
+# Expose MLflow port
+EXPOSE 5000
+
+# Default command to run MLflow server
+ENTRYPOINT ["mlflow", "server"]
+CMD ["--backend-store-uri", "sqlite:///mlflow/mlflow.db", "--default-artifact-root", "/mlflow/artifacts", "--host", "0.0.0.0"]

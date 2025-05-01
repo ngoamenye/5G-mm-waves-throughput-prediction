@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtualenv
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Artifacts
+models/
+outputs/
+mlflow/
+.env
