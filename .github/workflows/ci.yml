@@ -42,20 +42,38 @@ jobs:
           pip install pytest
           pytest || true
 
-  docker-build:
-    name: 🚧 Docker Build & Push
+  model-train:
+    name: 🎓 Train Model
     runs-on: ubuntu-latest
     needs: test
     steps:
       - name: ✅ Checkout Code
         uses: actions/checkout@v3
 
-      - name: 🔑 Log in to GHCR
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: ⚖️ Train Model
+        run: |
+          pip install -r requirements.txt
+          python train_tf_model.py
+
+  docker-build:
+    name: 🚧 Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: model-train
+    steps:
+      - name: ✅ Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🔑 Log in to GHCR with PAT
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: 🚗 Build and Push Trainer Docker Image
         run: |
