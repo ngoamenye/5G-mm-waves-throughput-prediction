@@ -6,7 +6,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/yourusername/fiveg_project.git'
+                git 'https://github.com/ngoamenye/5G-mm-waves-throughput-prediction.git'
             }
         }
         stage('Install Dependencies') {
@@ -26,23 +26,25 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    sh 'docker build -t ${DOCKER_IMAGE}:latest .'
-                    sh 'docker tag ${DOCKER_IMAGE}:latest ${DOCKER_IMAGE}:${BUILD_NUMBER}'
-                    sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                    docker.withRegistry('https://index.docker.io/v1/', '2353df0d-c9ae-4a8d-9b5b-931e9659d601') {
+                        sh 'docker build -t ${DOCKER_IMAGE}:latest .'
+                        sh 'docker tag ${DOCKER_IMAGE}:latest ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                        sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                    }
                 }
             }
         }
         stage('MLflow Logging') {
             steps {
                 script {
-                    sh 'python backend/ml/train.py'  // Trigger MLflow training and logging
+                    sh 'python train_tf_model.py'  // Corrected the path to train_tf_model.py
                 }
             }
         }
         stage('Deploy') {
             steps {
                 script {
-                    sh 'docker-compose up -d'  // Deploy services using Docker Compose
+                    sh 'docker-compose up -d'
                 }
             }
         }
