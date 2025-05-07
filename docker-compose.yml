@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+
+  django:
+    build: .
+    container_name: synergyx_django
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: bash entrypoint.sh  # Ensure this script exists and is executable
+    depends_on:
+      - prometheus
+      - mlflow
+    environment:
+      - DEBUG=True  # Add more environment variables if needed
+      - DJANGO_SETTINGS_MODULE=backend.settings  # Django settings module
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.3.0
+    container_name: synergyx_mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlflow/mlruns  # Ensures persistence of MLflow logs
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlflow/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000  # Point to MLflow tracking server if required
+
+  prometheus:
+    image: prom/prometheus
+    container_name: synergyx_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml  # Custom Prometheus config file
+
+  grafana:
+    image: grafana/grafana
+    container_name: synergyx_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana  # Persistent Grafana data
+
+  node_exporter:
+    image: prom/node-exporter
+    container_name: synergyx_node_exporter
+    ports:
+      - "9100:9100"  # Exposing node exporter metrics
+
+volumes:
+  grafana_data:  # Persistent Grafana data

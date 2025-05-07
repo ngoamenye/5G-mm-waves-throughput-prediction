@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = 'willisrunner/fiveg_app'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/yourusername/fiveg_project.git'
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    sh 'pip install -r requirements.txt'
+                }
+            }
+        }
+        stage('CI Checks') {
+            steps {
+                script {
+                    sh './scripts/ci_check.sh'
+                }
+            }
+        }
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE}:latest .'
+                    sh 'docker tag ${DOCKER_IMAGE}:latest ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                    sh 'docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                }
+            }
+        }
+        stage('MLflow Logging') {
+            steps {
+                script {
+                    sh 'python backend/ml/train.py'  // Trigger MLflow training and logging
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    sh 'docker-compose up -d'  // Deploy services using Docker Compose
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

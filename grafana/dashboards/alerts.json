@@ -1,0 +1,18 @@
+
+{
+  "title": "Alertes",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Drift Alerts",
+      "targets": [
+        {
+          "expr": "drift_detected",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 22,
+  "version": 1
+}

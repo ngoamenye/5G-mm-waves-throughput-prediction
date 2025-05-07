@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/axxiv/Desktop/5g_throughput_dashboard/mlruns/944159705056252089/66fa35aa94e94bb5be2ae34172247fbb/artifacts
+end_time: 1746160686608
+entry_point_name: ''
+experiment_id: '944159705056252089'
+lifecycle_stage: active
+run_id: 66fa35aa94e94bb5be2ae34172247fbb
+run_name: caring-pig-612
+run_uuid: 66fa35aa94e94bb5be2ae34172247fbb
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746159614463
+status: 3
+tags: []
+user_id: axxiv

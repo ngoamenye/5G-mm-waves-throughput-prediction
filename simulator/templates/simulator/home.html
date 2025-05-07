@@ -1,0 +1,32 @@
+{% extends 'simulator/layout.html' %}
+{% block content %}
+
+<section class="hero">
+    <h1>Bienvenue sur <span class="glow">SynergyX</span></h1>
+    <p>Une plateforme intelligente pour surveiller et prédire les performances de votre réseau 5G.</p>
+</section>
+
+<section class="features">
+    <div class="card">
+        <h2>📡 MLOps & Observabilité</h2>
+        <p>MLflow, Prometheus, Grafana... tout est connecté pour surveiller vos modèles et détecter les dégradations.</p>
+        <img src="{% static 'simulator/images/mlops.png' %}" alt="MLOps">
+    </div>
+    <div class="card">
+        <h2>🧠 Suivi système</h2>
+        <p>Consultez en temps réel l’usage CPU, RAM, connexions et alertes critiques.</p>
+        <img src="{% static 'simulator/images/cpu.png' %}" alt="CPU">
+    </div>
+    <div class="card">
+        <h2>🤖 Modèles IA</h2>
+        <p>Comparez les performances des modèles CNN, LSTM, Seq2Seq et autres en quelques clics.</p>
+        <img src="{% static 'simulator/images/models.png' %}" alt="Modèles IA">
+    </div>
+    <div class="card">
+        <h2>🗺️ Scénarios 5G</h2>
+        <p>Plongez dans nos simulations indoor/outdoor avec prédiction de débit et détection de handover.</p>
+        <a href="#" class="btn">Explorer</a>
+    </div>
+</section>
+
+{% endblock %}

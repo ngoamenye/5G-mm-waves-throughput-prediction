@@ -1,12 +1,10 @@
-# Exclude artifacts and local env
-venv/
-.venv/
-data/
-models/
-outputs/
-notebooks/
-*.ipynb
 __pycache__/
-*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+*.gz
 .env
-.git/
+mlruns/
+prod_models/

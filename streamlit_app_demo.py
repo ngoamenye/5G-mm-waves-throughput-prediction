@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import os
@@ -10,160 +11,154 @@ import pydeck as pdk
 import tensorflow as tf
 from tensorflow.keras import layers, models
 
-# ─── Configuration ────────────────────────────────────────────────
-DATA_PATH    = 'data/mm-5G-enriched.csv'
-MODEL_DIR    = 'models'
-SCALER_PATH  = os.path.join(MODEL_DIR, 'scaler.gz')
-WEIGHTS_H5   = os.path.join(MODEL_DIR, 'throughput_weights.weights.h5')
-FEATURES_PKL = os.path.join(MODEL_DIR, 'feature_names.pkl')
-SEQ_LEN      = 10
+# ─── Configuration ─────────────────────────────────────────────────────────────
+MAPBOX_API_KEY = os.getenv("MAPBOX_API_KEY")
 
-# Load data and pick 3 example runs
-df = pd.read_csv(DATA_PATH)
-runs = sorted(df['run_num'].unique())[:3]
+MODEL_DIR = "models"
+WEIGHTS_H5 = os.path.join(MODEL_DIR, "throughput_weights.weights.h5")
+SCALER_PATH = os.path.join(MODEL_DIR, "scaler.gz")
 
-# Load scaler, model, and feature names
-scaler = joblib.load(SCALER_PATH)
-feature_names = joblib.load(FEATURES_PKL)
-nf = len(feature_names)
+SEQ_LEN = 10
 
-def build_model(seq_len, nf):
+
+def build_cnn_lstm_model(seq_len, nf):
     inp = layers.Input(shape=(seq_len, nf))
-    x = layers.Conv1D(32, 3, padding='same', activation='relu')(inp)
-    x = layers.Conv1D(64, 3, padding='same', activation='relu')(x)
+    x = layers.Conv1D(32, 3, padding="same", activation="relu")(inp)
+    x = layers.Conv1D(64, 3, padding="same", activation="relu")(x)
     x = layers.MaxPooling1D(2)(x)
     x = layers.LSTM(64)(x)
-    raw = layers.Dense(1, name='raw')(x)
-    smooth = layers.Dense(1, name='smooth')(x)
-    return models.Model(inputs=inp, outputs=[raw, smooth])
+    raw_out = layers.Dense(1, name="raw")(x)
+    smooth_out = layers.Dense(1, name="smooth")(x)
+    return models.Model(inputs=inp, outputs=[raw_out, smooth_out])
 
-model = build_model(SEQ_LEN, nf)
-model.load_weights(WEIGHTS_H5)
 
-# Sidebar: choose run
-st.sidebar.title("Simulation Controls")
-run_sel = st.sidebar.selectbox("Select Run", runs)
-df_run = df[df['run_num'] == run_sel].reset_index(drop=True)
+# Load scaler & model weights
+scaler = joblib.load(SCALER_PATH)
+NF_FEATURES = scaler.scale_.shape[0]
 
-# Sidebar: step slider
-step = st.sidebar.slider("Step Index", 0, len(df_run)-1, 0)
+model = build_cnn_lstm_model(SEQ_LEN, NF_FEATURES)
+try:
+    model.load_weights(WEIGHTS_H5)
+except Exception:
+    st.error(
+        "Model weights not found. Please run train_tf_model.py to generate throughput_weights.weights.h5"
+    )
+    st.stop()
 
-# Extract step features window
-start = max(0, step - SEQ_LEN + 1)
-seq_df = df_run.loc[start:step, feature_names]
-# pad at top if needed
-if len(seq_df) < SEQ_LEN:
-    pad = pd.DataFrame([seq_df.iloc[0]] * (SEQ_LEN - len(seq_df)), columns=feature_names)
-    seq_df = pd.concat([pad, seq_df], ignore_index=True)
+encode = {"Driving": 2, "Walking": 1, "Stationary": 0}
 
-# Scale and reshape
-X_seq = seq_df.values
-X_flat = X_seq.reshape(-1, nf)
-X_scaled = scaler.transform(X_flat).reshape(1, SEQ_LEN, nf)
+# Streamlit page config
+st.set_page_config(layout="wide", page_title="5G Throughput 3D Simulator")
+st.title("🚀 5G Throughput 3D Simulator")
 
-# Predict
-pred_raw, pred_smooth = model.predict(X_scaled)
-raw_val, smooth_val = pred_raw.squeeze(), pred_smooth.squeeze()
-pred = raw_val if abs(raw_val - smooth_val) < abs(smooth_val - raw_val) else smooth_val
-
-# Detect unknown features (outside scaler range)
-mins = scaler.data_min_
-maxs = scaler.data_max_
-unknown = ((X_seq < mins) | (X_seq > maxs)).any()
-if unknown:
-    st.error("⚠️ Unknown feature detected: queuing sample for retraining.")
-    # Here you could append df_run.loc[step] to a retraining buffer
-
-# UI: display metrics
-st.title(f"🚦 Run {run_sel} – Step {step}")
-lat = df_run.loc[step, 'latitude']
-lon = df_run.loc[step, 'longitude']
-speed = df_run.loc[step, 'movingSpeed']
-
-st.subheader("Prediction")
-st.write(f"Raw: {raw_val:.2f} Mbps | Smooth: {smooth_val:.2f} Mbps")
-st.metric("Final Throughput (Mbps)", f"{pred:.2f}")
-
-# Define antenna positions & coverage radii (m)
-antennas = df[['tower_id','latitude','longitude']].drop_duplicates().set_index('tower_id').reset_index()
-# Example coverage radii
-antennas['mm_radius'] = 200
-antennas['lte_radius'] = 500
-
-# Build map layers
-pdk.settings.mapbox_api_key = os.getenv("MAPBOX_API_KEY")
-
-# Heatmap of throughput around the step
-grid = []
-for dlat in np.linspace(lat-0.005, lat+0.005, 15):
-    for dlon in np.linspace(lon-0.005, lon+0.005, 15):
-        base = []
-        for fn in feature_names:
-            if fn in ['latitude','longitude','movingSpeed','compassDirection']:
-                # simple spatial interpolation
-                if fn == 'latitude': base.append(dlat)
-                elif fn == 'longitude': base.append(dlon)
-                elif fn == 'movingSpeed': base.append(speed)
-                else: base.append(0)
-            else:
-                base.append(0)
-        arr = np.array(base)
-        if len(arr) < nf:
-            arr = np.concatenate([arr, np.zeros(nf - len(arr))])
-        Xg = np.tile(arr, (SEQ_LEN,1))
-        Xg_scaled = scaler.transform(Xg.reshape(-1,nf)).reshape(1,SEQ_LEN,nf)
-        r,g = model.predict(Xg_scaled)
-        val = float(r) if abs(r-g)<abs(g-r) else float(g)
-        grid.append({'lat':dlat,'lon':dlon,'throughput':val})
-grid_df = pd.DataFrame(grid)
-
-coverage = pdk.Layer(
-    "HeatmapLayer",
-    data=grid_df,
-    get_position=["lon","lat"],
-    get_weight="throughput",
-    radiusPixels=50
+# Scenario selection
+scenario = st.sidebar.selectbox(
+    "Select Scenario", ["Urban Drive → Airport Walk", "Custom"]
 )
-mmwave_layer = pdk.Layer(
+if scenario == "Urban Drive → Airport Walk":
+    mode = "Driving"
+    speed = 60
+    antenna_df = pd.DataFrame(
+        [
+            {"lat": 40.7561, "lon": -73.9903, "coverage": 300, "orientation": 45},
+            {"lat": 40.7580, "lon": -73.9855, "coverage": 250, "orientation": 135},
+            {"lat": 40.7595, "lon": -73.9870, "coverage": 200, "orientation": 90},
+        ]
+    )
+    route = [
+        (40.7527, -73.9772),
+        (40.7540, -73.9800),
+        (40.7555, -73.9850),
+        (40.7570, -73.9875),
+        (40.7585, -73.9890),
+        (40.7595, -73.9895),
+        (40.7605, -73.9900),
+    ]
+else:
+    mode = st.sidebar.selectbox("Mobility Mode", ["Driving", "Walking", "Stationary"])
+    speed = st.sidebar.slider("Speed (km/h)", 0, 120, 30)
+    st.sidebar.markdown("### Antennas CSV")
+    ant_file = st.sidebar.file_uploader("Upload antenna CSV", type="csv")
+    if ant_file:
+        antenna_df = pd.read_csv(ant_file)
+    else:
+        antenna_df = pd.DataFrame(
+            [{"lat": 40.7128, "lon": -74.0060, "coverage": 300, "orientation": 0}]
+        )
+    st.sidebar.markdown("### Route CSV")
+    route_file = st.sidebar.file_uploader("Upload route CSV", type="csv")
+    if route_file:
+        df_rt = pd.read_csv(route_file)
+        route = list(zip(df_rt.lat, df_rt.lon))
+    else:
+        route = [(antenna_df.lat.mean(), antenna_df.lon.mean())]
+
+# Deck.gl 3D visualization
+buildings = pdk.Layer(
+    "FillExtrusionLayer",
+    data="mapbox://mapbox.3d-buildings",
+    get_fill_extrusion_height="properties.height",
+    get_fill_extrusion_base="properties.min_height",
+    get_fill_extrusion_color=[200, 200, 200],
+    pickable=False,
+)
+
+antenna_layer = pdk.Layer(
     "ColumnLayer",
-    data=antennas,
-    get_position=["longitude","latitude"],
-    get_elevation="mm_radius",
+    data=antenna_df,
+    get_position=["lon", "lat"],
+    get_elevation="coverage",
     elevation_scale=1,
-    radius="mm_radius",
-    get_fill_color=[0,128,255,80],
-    pickable=False
-)
-lte_layer = pdk.Layer(
-    "ColumnLayer",
-    data=antennas,
-    get_position=["longitude","latitude"],
-    get_elevation="lte_radius",
-    elevation_scale=1,
-    radius="lte_radius",
-    get_fill_color=[255,165,0,50],
-    pickable=False
-)
-point_layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=pd.DataFrame([{'lat':lat,'lon':lon}]),
-    get_position=["lon","lat"],
-    get_radius=10,
-    get_fill_color=[255,0,0],
+    radius=50,
+    get_fill_color=[0, 128, 255, 100],
+    pickable=True,
 )
 
-view = pdk.ViewState(latitude=lat, longitude=lon, zoom=14, pitch=45)
+route_df = pd.DataFrame(route, columns=["lat", "lon"])
+line_layer = pdk.Layer(
+    "LineLayer",
+    data=route_df,
+    get_source_position=["lon", "lat"],
+    get_target_position=["lon", "lat"],
+    get_width=4,
+    get_color=[255, 0, 0],
+)
+
+view_state = pdk.ViewState(
+    latitude=route[0][0], longitude=route[0][1], zoom=14, pitch=60, bearing=0
+)
+
+pdk.settings.mapbox_api_key = MAPBOX_API_KEY
 deck = pdk.Deck(
-    layers=[coverage, mmwave_layer, lte_layer, point_layer],
-    initial_view_state=view,
-    map_style="mapbox://styles/mapbox/light-v10"
+    layers=[buildings, antenna_layer, line_layer],
+    initial_view_state=view_state,
+    map_style="mapbox://styles/mapbox/light-v10",
 )
+
 st.pydeck_chart(deck, use_container_width=True)
 
-# Recommendations
-if pred < 20:
-    st.warning("🔴 Very low throughput: recommend switching to LTE fallback.")
-elif pred < 50:
-    st.info("🟠 Moderate throughput: consider reorienting to closest antenna.")
+# Prediction at current step
+step = st.sidebar.slider("Step", 0, len(route) - 1, 0)
+lat, lon = route[step]
+
+
+def assemble(lat, lon, speed, mode, antenna_df):
+    arr = [lat, lon, speed, encode[mode]]
+    for _, r in antenna_df.iterrows():
+        arr.extend([r.lat, r.lon, r.orientation])
+    return np.array(arr)
+
+
+seq = np.tile(assemble(lat, lon, speed, mode, antenna_df), (SEQ_LEN, 1))
+nf = NF_FEATURES
+if seq.shape[1] < nf:
+    seq = np.hstack([seq, np.zeros((SEQ_LEN, nf - seq.shape[1]))])
 else:
-    st.success("🟢 Good coverage: continue on 5G mmWave.")
+    seq = seq[:, :nf]
+
+scaled = scaler.transform(seq).reshape(1, SEQ_LEN, nf)
+raw_pred, smooth_pred = model.predict(scaled)
+r, s = float(raw_pred), float(smooth_pred)
+pred = r if abs(r - s) < abs(s - r) else s
+
+st.metric("Predicted Throughput (Mbps)", f"{pred:.2f}")

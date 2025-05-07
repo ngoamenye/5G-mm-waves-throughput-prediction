@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Simulation NR{% endblock %}
+{% block content %}
+<h2 class="text-2xl font-bold mb-4">Simulation entre deux antennes NR 📡</h2>
+<div id="map" style="height: 500px;" class="rounded-lg shadow-md"></div>
+<p id="output" class="mt-4 text-lg text-cyan-300 font-semibold"></p>
+
+<!-- Mapbox CSS & JS -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+<script>
+  // ✅ Token Mapbox (tu peux le rendre dynamique si besoin)
+  mapboxgl.accessToken = 'pk.eyJ1IjoibHVjbmdvYSIsImEiOiJjbWE0ZThhN2IwN3V5Mm5zOGFtemhiaGJvIn0.Zfi7bimqMLDCiC2-5NEW7w';
+
+  // Points de départ et d'arrivée (à adapter si besoin)
+  const start = [10.1234, 33.1234];  // longitude, latitude
+  const end = [10.1334, 33.1334];
+  const steps = 20;
+  let currentStep = 0;
+
+  function interpolate(p1, p2, step, total) {
+    return [
+      p1[0] + (p2[0] - p1[0]) * step / total,
+      p1[1] + (p2[1] - p1[1]) * step / total
+    ];
+  }
+
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: start,
+    zoom: 16
+  });
+
+  const marker = new mapboxgl.Marker({ color: "orange" }).setLngLat(start).addTo(map);
+
+  function simulateStep() {
+    if (currentStep > steps) return;
+
+    const pos = interpolate(start, end, currentStep, steps);
+    marker.setLngLat(pos);
+
+    const params = new URLSearchParams({
+      lon: pos[0],
+      lat: pos[1],
+      speed: 3.5,
+      direction: 45,
+      nr_ssRsrp: -85,
+      nr_ssRsrq: -10,
+      nr_ssSinr: 20
+    });
+
+    fetch('/api/map_prediction/?' + params)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("output").innerText =
+          `📶 Étape ${currentStep + 1} : Débit prédit → ${data.throughput} Mbps`;
+        currentStep++;
+        setTimeout(simulateStep, 1000);
+      });
+  }
+
+  map.on('load', () => {
+    simulateStep();
+
+    // Antennes avec cercles de couverture
+    fetch('/api/get_antennas/')
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(antenna => {
+          map.addSource(`circle-${antenna.tower_id}`, {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [antenna.longitude, antenna.latitude]
+              }
+            }
+          });
+
+          map.addLayer({
+            id: `circle-${antenna.tower_id}`,
+            type: 'circle',
+            source: `circle-${antenna.tower_id}`,
+            paint: {
+              'circle-radius': {
+                stops: [[0, 0], [20, antenna.radius / 2]],
+                base: 2
+              },
+              'circle-color': '#00ffff',
+              'circle-opacity': 0.25
+            }
+          });
+
+          new mapboxgl.Marker({ color: "#00ffff" })
+            .setLngLat([antenna.longitude, antenna.latitude])
+            .setPopup(new mapboxgl.Popup().setText(`Antenne ID: ${antenna.tower_id}`))
+            .addTo(map);
+        });
+      });
+  });
+</script>
+{% endblock %}

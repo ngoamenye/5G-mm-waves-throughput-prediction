@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}5G Platform{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+  <nav class="bg-gray-800 p-4 shadow-md flex justify-between items-center">
+    <div class="text-xl font-bold text-cyan-400">SynergyX</div>
+    <ul class="flex space-x-6">
+      <li><a href="{% url 'dashboard' %}" class="hover:text-cyan-300">🏠 Accueil</a></li>
+      <li><a href="{% url 'predict_page' %}" class="hover:text-cyan-300">🔍 Prédiction</a></li>
+      <li><a href="{% url 'drift_page' %}" class="hover:text-cyan-300">📉 Drift</a></li>
+      <li><a href="{% url 'map_page' %}" class="hover:text-cyan-300">🗺️ Carte</a></li>
+      <li><a href="{% url 'logout' %}" class="hover:text-red-400">🔓 Déconnexion</a></li>
+    </ul>
+  </nav>
+
+  <main class="container mx-auto py-6">
+    {% block content %}
+    {% endblock %}
+  </main>
+</body>
+
+</html>

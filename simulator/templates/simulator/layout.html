@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>SynergyX</title>
+    <link rel="stylesheet" href="{% static 'simulator/css/home.css' %}">
+</head>
+<body>
+    <canvas id="bg"></canvas>
+    <nav class="navbar">
+        <div class="logo">SynergyX</div>
+        <ul class="nav-links">
+            <li><a href="#">Accueil</a></li>
+            <li><a href="#">MLOps</a></li>
+            <li><a href="#">Métriques</a></li>
+            <li><a href="#">Modèles</a></li>
+            <li><a href="#">Scénarios</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{% static 'simulator/js/particles.js' %}"></script>
+</body>
+</html>

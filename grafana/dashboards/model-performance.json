@@ -1,0 +1,25 @@
+
+{
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Model MAE",
+      "targets": [
+        {
+          "expr": "mae_score",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "title": "Model Performance",
+  "timezone": "browser",
+  "schemaVersion": 22,
+  "version": 1,
+  "refresh": "10s"
+}

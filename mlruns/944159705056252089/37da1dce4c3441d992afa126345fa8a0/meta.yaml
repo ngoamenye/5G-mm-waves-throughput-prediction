@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/axxiv/Desktop/5g_throughput_dashboard/mlruns/944159705056252089/37da1dce4c3441d992afa126345fa8a0/artifacts
+end_time: 1746159390883
+entry_point_name: ''
+experiment_id: '944159705056252089'
+lifecycle_stage: active
+run_id: 37da1dce4c3441d992afa126345fa8a0
+run_name: bemused-bee-202
+run_uuid: 37da1dce4c3441d992afa126345fa8a0
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1746158038042
+status: 3
+tags: []
+user_id: axxiv

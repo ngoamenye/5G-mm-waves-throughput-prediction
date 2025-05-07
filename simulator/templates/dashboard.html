@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Dashboard SynergyX{% endblock %}
+
+{% block content %}
+<div class="container mx-auto flex">
+    <!-- Colonne gauche - Menu de navigation -->
+    <div class="w-1/5 bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl text-white font-semibold mb-4">Sections du Dashboard</h2>
+        <ul class="text-white">
+            <li><a href="#scenarios" class="block py-2 hover:bg-gray-600">🗺️ Scénarios de simulation</a></li>
+            <li><a href="#performances" class="block py-2 hover:bg-gray-600">📊 Performances des modèles</a></li>
+            <li><a href="#mlops" class="block py-2 hover:bg-gray-600">🔧 MLOps (MLflow, Grafana)</a></li>
+            <li><a href="#dataops" class="block py-2 hover:bg-gray-600">🧬 DataOps (évolution et contextes)</a></li>
+            <li><a href="#system_metrics" class="block py-2 hover:bg-gray-600">💻 État du système</a></li>
+        </ul>
+    </div>
+
+    <!-- Colonne droite - Contenu des sections -->
+    <div class="w-4/5 p-4">
+        <!-- Section Scénarios -->
+        <div id="scenarios" class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">🗺️ Scénarios de simulation</h2>
+            <p>Visualisation interactive des différents scénarios en temps réel avec prédiction de débit entre les antennes NR.</p>
+            <div id="map" style="height: 500px;"></div>
+        </div>
+
+        <!-- Section Performances -->
+        <div id="performances" class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">📊 Performances des modèles</h2>
+            <p>Suivi de la performance des différents modèles avec des graphiques interactifs et des indicateurs clés tels que l'accuracy, la perte, etc.</p>
+            <div id="performance-graphs">
+                <!-- Exemple de graphique d'accuracy et de perte -->
+                <canvas id="accuracyLossGraph" width="100%" height="400"></canvas>
+                <script>
+                    var ctx = document.getElementById('accuracyLossGraph').getContext('2d');
+                    var accuracyLossChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4'], // Remplacer par les vrais labels
+                            datasets: [{
+                                label: 'Accuracy',
+                                data: [0.85, 0.88, 0.89, 0.92], // Remplacer par les vraies données
+                                borderColor: 'green',
+                                borderWidth: 1,
+                                fill: false
+                            }, {
+                                label: 'Loss',
+                                data: [0.35, 0.3, 0.25, 0.2], // Remplacer par les vraies données
+                                borderColor: 'red',
+                                borderWidth: 1,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- Section MLOps -->
+        <div id="mlops" class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">🔧 MLOps (MLflow, Grafana)</h2>
+            <p>Suivi de l'apprentissage des modèles via MLflow et visualisation des métriques sur Grafana.</p>
+            <div class="flex">
+                <div class="w-1/2">
+                    <!-- Intégration de MLflow -->
+                    <iframe src="URL_MLFLOW" width="100%" height="300"></iframe>
+                </div>
+                <div class="w-1/2">
+                    <!-- Intégration de Grafana -->
+                    <iframe src="URL_GRAFANA" width="100%" height="300"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section DataOps -->
+        <div id="dataops" class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">🧬 DataOps (évolution et contextes)</h2>
+            <p>Visualisation des évolutions des performances des modèles en fonction des différents contextes (environnement, données, etc.).</p>
+            <div id="dataops-graphs">
+                <!-- Graphiques DataOps -->
+                <canvas id="dataopsGraph" width="100%" height="400"></canvas>
+                <script>
+                    var ctx2 = document.getElementById('dataopsGraph').getContext('2d');
+                    var dataopsChart = new Chart(ctx2, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jour 1', 'Jour 2', 'Jour 3', 'Jour 4'], // Remplacer par les vrais labels
+                            datasets: [{
+                                label: 'Performance',
+                                data: [0.75, 0.78, 0.80, 0.85], // Remplacer par les vraies données
+                                borderColor: 'blue',
+                                borderWidth: 1,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- Section État du système -->
+        <div id="system_metrics" class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">💻 État du système</h2>
+            <p>Suivi des métriques système (CPU, mémoire, etc.) pour observer l'impact des modèles sur le serveur.</p>
+            <div id="system-metrics">
+                <!-- Graphiques sur les métriques système -->
+                <canvas id="cpuMemoryGraph" width="100%" height="400"></canvas>
+                <script>
+                    var ctx3 = document.getElementById('cpuMemoryGraph').getContext('2d');
+                    var systemMetricsChart = new Chart(ctx3, {
+                        type: 'bar',
+                        data: {
+                            labels: ['CPU Usage', 'Memory Usage'], // Exemple de labels
+                            datasets: [{
+                                label: 'Utilisation (%)',
+                                data: [75, 60], // Remplacer par les vraies données
+                                backgroundColor: ['red', 'blue'],
+                                borderColor: ['darkred', 'darkblue'],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

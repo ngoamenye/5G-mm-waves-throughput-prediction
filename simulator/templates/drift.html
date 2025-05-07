@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Drift Detection{% endblock %}
+{% block content %}
+<div class="p-8">
+  <h1 class="text-2xl font-bold mb-4">Drift Detection</h1>
+  <form id="driftForm" class="space-y-4">
+    <textarea name="jsonInput" id="jsonInput" class="w-full p-4 border border-gray-300 rounded" rows="8" placeholder='{"rssi": -80, "sinr": 5, ...}'></textarea>
+    <button type="submit" class="bg-yellow-500 text-white px-4 py-2 rounded">Tester le drift</button>
+  </form>
+  <pre id="driftResult" class="mt-6 text-sm bg-gray-100 p-4 rounded"></pre>
+</div>
+<script>
+  document.getElementById('driftForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = document.getElementById('jsonInput').value;
+    const res = await fetch('/api/detect_drift/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: data
+    });
+    const result = await res.json();
+    document.getElementById('driftResult').innerText = JSON.stringify(result, null, 2);
+  });
+</script>
+{% endblock %}

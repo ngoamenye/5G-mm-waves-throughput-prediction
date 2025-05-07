@@ -5,106 +5,104 @@ import numpy as np
 import joblib
 import folium
 from streamlit_folium import st_folium
-from folium.plugins import HeatMap
 import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 
 # Load model and scaler
-MODEL_PATH = 'models/throughput_model.keras'
-SCALER_PATH = 'models/scaler.gz'
-# Load only for inference (no re-compilation)
-model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+MODEL_PATH = "models/throughput_model.keras"
+SCALER_PATH = "models/scaler.gz"
 
-# If you plan to retrain later, compile it explicitly:
-model.compile(optimizer='adam', loss='mse')
+if not os.path.exists(MODEL_PATH):
+    st.error(
+        "Model file not found. Please ensure 'throughput_model.keras' is trained and exists in models/."
+    )
+    st.stop()
+
+if not os.path.exists(SCALER_PATH):
+    st.error("Scaler file not found. Please ensure 'scaler.gz' exists in models/.")
+    st.stop()
+
+model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+model.compile(optimizer="adam", loss="mse")
 scaler = joblib.load(SCALER_PATH)
+
+# Load enriched dataset
+df = pd.read_csv("data/mm-5G-enriched.csv")
 
 # Configuration
 SEQ_LEN = 10
-encode = {'Stationary':0, 'Walking':1, 'Driving':2}
+encode = {"Stationary": 0, "Walking": 1, "Driving": 2}
 
 # Streamlit UI
 st.set_page_config(layout="wide", page_title="5G Throughput Simulator")
-st.title("5G Throughput Simulator (TensorFlow)")
+st.title("5G Throughput Simulator with Real Dataset Scenarios")
 
 # Sidebar controls
-st.sidebar.header("Simulation Controls")
-scenario = st.sidebar.selectbox("Mobility Mode", ["Stationary", "Walking", "Driving"])
-speed = st.sidebar.slider("Speed (km/h)", 0, 120, 30)
+st.sidebar.header("Scenario Selection")
+selected_run = st.sidebar.selectbox(
+    "Choose a Simulation Run", sorted(df["run_num"].unique())
+)
 
-st.sidebar.markdown("---")
-st.sidebar.header("Antenna Configuration")
-ant_data = st.sidebar.file_uploader("Upload antenna CSV", type=["csv"])
-if ant_data:
-    ant_df = pd.read_csv(ant_data)
-else:
-    ant_df = pd.DataFrame([
-        {"lat": 40.7128, "lon": -74.0060, "orientation": 0},
-        {"lat": 40.7138, "lon": -74.0050, "orientation": 90},
-    ])
+# Filter run from dataset
+run_df = df[df["run_num"] == selected_run].reset_index(drop=True)
 
-if st.sidebar.checkbox("Add new antenna"):
-    with st.sidebar.form(key="add_ant_form"):
-        new_lat = st.number_input("Latitude", format="%.6f")
-        new_lon = st.number_input("Longitude", format="%.6f")
-        new_orient = st.slider("Orientation (deg)", 0, 359, 0)
-        submitted = st.form_submit_button("Add Antenna")
-        if submitted:
-            ant_df = ant_df.append({
-                "lat": new_lat, "lon": new_lon, "orientation": new_orient
-            }, ignore_index=True)
+# Detect feature columns automatically (excluding targets and ID cols)
+exclude = [
+    "throughput",
+    "throughput_smoothed",
+    "debit_brut",
+    "debit_lisse",
+    "debit_class",
+    "run_num",
+]
+features = [col for col in run_df.columns if col not in exclude]
 
-# Initialize user path
-if 'path' not in st.session_state:
-    center = (ant_df.lat.mean(), ant_df.lon.mean())
-    st.session_state.path = [center]
+# Map initialization
+start_coord = [run_df.iloc[0]["latitude"], run_df.iloc[0]["longitude"]]
+m = folium.Map(location=start_coord, zoom_start=16)
 
-def assemble_features(lat, lon, speed, ant_df, scenario):
-    flat = [lat, lon, speed, encode[scenario]]
-    for _, r in ant_df.iterrows():
-        flat += [r.lat, r.lon, r.orientation]
-    return np.array(flat)
+# Prediction loop
+predictions = []
+for i in range(len(run_df) - SEQ_LEN):
+    window = run_df.iloc[i : i + SEQ_LEN]
+    raw_feats = window[features].to_numpy()
+    scaled_feats = scaler.transform(raw_feats).reshape(1, SEQ_LEN, -1)
+    pred_raw, pred_smooth = model.predict(scaled_feats, verbose=0)
+    pred = (
+        float(pred_raw.squeeze())
+        if abs(pred_raw - pred_smooth) < abs(pred_smooth - pred_raw)
+        else float(pred_smooth.squeeze())
+    )
+    predictions.append(pred)
 
-# Map display
-m = folium.Map(location=st.session_state.path[-1], zoom_start=14)
-for _, r in ant_df.iterrows():
-    folium.Marker(
-        location=(r.lat, r.lon),
-        icon=folium.Icon(color="blue"),
-        popup=f"Orient: {r.orientation}"
+    # Add step marker on the map
+    step_lat = run_df.iloc[i + SEQ_LEN - 1]["latitude"]
+    step_lon = run_df.iloc[i + SEQ_LEN - 1]["longitude"]
+    folium.CircleMarker(
+        location=[step_lat, step_lon],
+        radius=3,
+        color="red",
+        fill=True,
+        fill_opacity=0.7,
     ).add_to(m)
-folium.CircleMarker(
-    location=st.session_state.path[-1], radius=6,
-    color="red", fill=True
-).add_to(m)
-st_folium(m, width=800, height=600)
 
-# Simulate movement
-if scenario != "Stationary":
-    last_lat, last_lon = st.session_state.path[-1]
-    delta = speed / 100000
-    new_lat = last_lat + np.random.uniform(-delta, delta)
-    new_lon = last_lon + np.random.uniform(-delta, delta)
-    st.session_state.path.append((new_lat, new_lon))
+# Show map
+st.subheader("Predicted Path on Map")
+st_data = st_folium(m, width=800, height=600)
 
-# Predict throughput
-user_lat, user_lon = st.session_state.path[-1]
-feat = assemble_features(user_lat, user_lon, speed, ant_df, scenario)
-dummy_seq = np.tile(feat, (SEQ_LEN,1))
-try:
-    seq_scaled = scaler.transform(dummy_seq).reshape(1, SEQ_LEN, -1)
-except ValueError:
-    # Fallback: features don’t match scaler, so fit a fresh scaler on dummy_seq
-    tmp_scaler = MinMaxScaler()
-    seq_scaled = tmp_scaler.fit_transform(dummy_seq).reshape(1, SEQ_LEN, -1)
-pred_raw, pred_smooth = model.predict(seq_scaled)
-val_raw = float(pred_raw.squeeze())
-val_smooth = float(pred_smooth.squeeze())
-pred_final = val_raw if abs(val_raw - val_smooth) < abs(val_smooth - val_raw) else val_smooth
-st.metric("Predicted Throughput (Mbps)", f"{pred_final:.2f}")
+# Display metrics summary
+st.subheader("Simulation Summary")
+st.markdown(f"**Selected Run:** {selected_run}")
+st.markdown(f"**Steps Processed:** {len(predictions)}")
+st.line_chart(
+    predictions, use_container_width=True, y_label="Predicted Throughput (Mbps)"
+)
 
-# Retrain button
-if st.button("Retrain Model on Latest Sample"):
-    model.fit(seq_scaled, np.array([[pred_final, pred_final]]), epochs=1, verbose=0)
-    model.save(MODEL_PATH)
-    st.success("Model retrained incrementally.")
+# Optional: Save scenario results
+if st.button("Export Predictions"):
+    pred_df = pd.DataFrame(
+        {"step": list(range(len(predictions))), "predicted_throughput": predictions}
+    )
+    os.makedirs("outputs", exist_ok=True)
+    pred_df.to_csv(f"outputs/predictions_run_{selected_run}.csv", index=False)
+    st.success(f"Predictions for run {selected_run} exported to outputs/")
