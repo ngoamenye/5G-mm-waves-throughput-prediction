@@ -8,3 +8,7 @@ __pycache__/
 .env
 mlruns/
 prod_models/
+.git
+.github
+node_modules
+ml_pipeline
