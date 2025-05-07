@@ -1,23 +1,29 @@
-# Dockerfile
 FROM python:3.9-slim
 
-# Créer le dossier d’application
-WORKDIR /app
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV LANG C.UTF-8
+ENV PYTHON_VERSION=3.9
 
-# Copie du code et des fichiers de conf
-COPY . /app
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    build-essential \
+    libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Variables d’environnement pour Django
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Installation des dépendances
+# Upgrade pip and install dependencies from requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
     pip install mlflow
 
-# Ports exposés
-EXPOSE 8000 5000 9090
+# Copy application files
+COPY . /app/
 
-# Point d'entrée : on utilise un script pour lancer tous les services
-ENTRYPOINT ["/bin/bash", "entrypoint.sh"]
+# Set the working directory
+WORKDIR /app
+
+# Run the app
+CMD ["python", "train_tf_model.py"]
