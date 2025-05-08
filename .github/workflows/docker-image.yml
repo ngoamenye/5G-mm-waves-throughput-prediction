@@ -20,8 +20,8 @@ jobs:
     - name: Login to DockerHub
       uses: docker/login-action@v2
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}  # Using the secret for Docker Hub username
-        password: ${{ secrets.DOCKER_PASSWORD }}  # Using the secret for Docker Hub password
+        username: ${{ secrets.DOCKER_USERNAME }}  # Use the Docker Hub username secret
+        password: ${{ secrets.DOCKER_PASSWORD }}  # Use the Docker Hub password secret
 
     - name: Build the Docker image
       run: |
