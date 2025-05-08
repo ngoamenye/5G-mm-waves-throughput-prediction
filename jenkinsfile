@@ -9,20 +9,28 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/ngoamenye/5G-mm-waves-throughput-prediction.git'
             }
         }
-        // stage('Install Dependencies') {
-        //     steps {
-        //         script {
-        //             sh 'pip install -r requirements.txt'
-        //         }
-        //     }
-        // }
+        
+        // Skipping the Install Dependencies stage
+        // CI Checks are still kept, without installing requirements
+
         stage('CI Checks') {
             steps {
                 script {
-                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" ./scripts/ci_check.sh'
+                    echo "Running Black formatting..."
+                    sh 'black backend/'
+
+                    echo "Running Flake8 for code linting..."
+                    sh 'flake8 backend/'
+
+                    echo "Running Bandit for security checks..."
+                    sh 'bandit -r backend/'
+
+                    echo "Running tests..."
+                    sh 'pytest backend/'  // Adjust if you have tests in specific directories
                 }
             }
         }
+
         stage('Docker Build & Push') {
             steps {
                 script {
@@ -34,17 +42,21 @@ pipeline {
                 }
             }
         }
+
         stage('MLflow Logging') {
             steps {
                 script {
-                    sh 'python train_tf_model.py'  // Ensure the file exists and path is correct
+                    // Ensure the model training script exists and path is correct
+                    sh 'python3 backend/ml/train.py' 
                 }
             }
         }
+
         stage('Deploy') {
             steps {
                 script {
-                    sh 'docker-compose up -d'  // Ensure docker-compose.yml is available and valid
+                    // Ensure docker-compose.yml is available and valid
+                    sh 'docker-compose up -d'
                 }
             }
         }
