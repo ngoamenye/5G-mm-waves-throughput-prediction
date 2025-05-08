@@ -9,13 +9,13 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/ngoamenye/5G-mm-waves-throughput-prediction.git'
             }
         }
-        stage('Install Dependencies') {
-            steps {
-                script {
-                    sh 'pip install -r requirements.txt'
-                }
-            }
-        }
+        // stage('Install Dependencies') {
+        //     steps {
+        //         script {
+        //             sh 'pip install -r requirements.txt'
+        //         }
+        //     }
+        // }
         stage('CI Checks') {
             steps {
                 script {
