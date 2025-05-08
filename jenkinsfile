@@ -19,7 +19,7 @@ pipeline {
         stage('CI Checks') {
             steps {
                 script {
-                    sh './scripts/ci_check.sh'
+                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" ./scripts/ci_check.sh'
                 }
             }
         }
