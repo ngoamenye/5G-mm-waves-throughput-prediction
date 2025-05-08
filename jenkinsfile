@@ -9,9 +9,16 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/ngoamenye/5G-mm-waves-throughput-prediction.git'
             }
         }
-        
-        // Skipping the Install Dependencies stage
-        // CI Checks are still kept, without installing requirements
+
+        stage('Install CI Dependencies') {
+            steps {
+                script {
+                    // Install only the necessary CI tools (black, flake8, bandit, pytest)
+                    echo "Installing CI dependencies..."
+                    sh 'pip install black flake8 bandit pytest'
+                }
+            }
+        }
 
         stage('CI Checks') {
             steps {
@@ -63,7 +70,7 @@ pipeline {
     }
     post {
         always {
-            cleanWs()
+            cleanWs()  // Clean workspace after each build
         }
     }
 }
