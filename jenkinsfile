@@ -6,7 +6,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/ngoamenye/5G-mm-waves-throughput-prediction.git'
+                git branch: 'main', url: 'https://github.com/ngoamenye/5G-mm-waves-throughput-prediction.git'
             }
         }
         stage('Install Dependencies') {
@@ -37,14 +37,14 @@ pipeline {
         stage('MLflow Logging') {
             steps {
                 script {
-                    sh 'python train_tf_model.py'  // Corrected the path to train_tf_model.py
+                    sh 'python train_tf_model.py'  // Ensure the file exists and path is correct
                 }
             }
         }
         stage('Deploy') {
             steps {
                 script {
-                    sh 'docker-compose up -d'
+                    sh 'docker-compose up -d'  // Ensure docker-compose.yml is available and valid
                 }
             }
         }
