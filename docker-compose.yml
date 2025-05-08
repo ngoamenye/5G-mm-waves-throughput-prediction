@@ -1,10 +1,12 @@
-version: '3.8'
+
 
 services:
 
+  # Django app (your existing service)
   django:
     build: .
     container_name: synergyx_django
+    image: willisrunner/5g:v1.0.0  # Add your image here
     ports:
       - "8000:8000"
     volumes:
@@ -17,17 +19,19 @@ services:
       - DEBUG=True  # Add more environment variables if needed
       - DJANGO_SETTINGS_MODULE=backend.settings  # Django settings module
 
+  # MLflow service (newly added)
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.3.0
+    image: ghcr.io/mlflow/mlflow:v2.3.0  # Use the MLflow image from DockerHub
     container_name: synergyx_mlflow
     ports:
-      - "5000:5000"
+      - "5000:5000"  # MLflow UI port
     volumes:
-      - ./mlruns:/mlflow/mlruns  # Ensures persistence of MLflow logs
-    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlflow/mlruns
+      - ./mlruns:/mlflow/mlruns  # Store MLflow logs and artifacts on host
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000  # Point to MLflow tracking server if required
+      - MLFLOW_TRACKING_URI=http://mlflow:5000  # Ensure the service points to the MLflow container
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlflow/mlruns  # Command to start MLflow server
 
+  # Prometheus service (existing)
   prometheus:
     image: prom/prometheus
     container_name: synergyx_prometheus
@@ -36,6 +40,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml  # Custom Prometheus config file
 
+  # Grafana service (existing)
   grafana:
     image: grafana/grafana
     container_name: synergyx_grafana
@@ -47,6 +52,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana  # Persistent Grafana data
 
+  # Node Exporter (existing)
   node_exporter:
     image: prom/node-exporter
     container_name: synergyx_node_exporter
@@ -55,3 +61,4 @@ services:
 
 volumes:
   grafana_data:  # Persistent Grafana data
+  mlruns:  # Persistent MLflow data (logs, experiments)
